@@ -1,0 +1,23 @@
+services:
+  api:
+    build: .
+    container_name: my_api
+    command: python scripts/run_api.py
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://${USER_POSTGRES}:${PASSWORD_POSTGRES}@db:5432/${DATABASE_POSTGRES}
+    depends_on:
+      - db
+
+  db:
+    image: postgres:15
+    container_name: postgres_db
+    restart: always
+    environment:
+      POSTGRES_USER: ${USER_POSTGRES}
+      POSTGRES_PASSWORD: ${PASSWORD_POSTGRES}
+      POSTGRES_DB: ${DATABASE_POSTGRES}
+    ports:
+      - "5433:5432"
+
