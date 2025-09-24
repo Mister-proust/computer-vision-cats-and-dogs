@@ -9,13 +9,54 @@ import sys
 ROOT_DIR = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(ROOT_DIR))
 
-from config.settings import ROOT_DIR, PROCESSED_DATA_DIR
+from src.utils.db import SessionLocal
+from src.data.database import time_metrics
 
+def log_inference_time(inference_time_ms: float, success: bool = True):
+    """Enregistrer une métrique d'inférence dans PostgreSQL"""
+    db = SessionLocal()
+    try:
+        metric = time_metrics(
+            timestamp=datetime.utcnow(),
+            inference_time_ms=round(inference_time_ms, 2),
+            success=success
+        )
+        db.add(metric)
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        raise e
+    finally:
+        db.close()
+
+def time_inference(func):
+    """Décorateur pour mesurer le temps d'inférence"""
+    @wraps(func)
+    async def wrapper(*args, **kwargs):
+        start_time = time.perf_counter()
+        try:
+            result = await func(*args, **kwargs)
+            end_time = time.perf_counter()
+
+            inference_time_ms = (end_time - start_time) * 1000
+            log_inference_time(inference_time_ms, success=True)
+            return result
+
+        except Exception as e:
+            end_time = time.perf_counter()
+            inference_time_ms = (end_time - start_time) * 1000
+            log_inference_time(inference_time_ms, success=False)
+            raise e
+
+    return wrapper
+
+
+"""
 # Fichier CSV pour stocker les métriques
 MONITORING_FILE = PROCESSED_DATA_DIR / "monitoring_inference.csv"
 
 def ensure_monitoring_file():
-    """Créer le fichier CSV avec les headers si nécessaire"""
+    Créer le fichier CSV avec les headers si nécessaire
     if not MONITORING_FILE.exists():
         with open(MONITORING_FILE, 'w', newline='', encoding='utf-8') as f:
             writer = csv.writer(f)
@@ -26,7 +67,7 @@ def ensure_monitoring_file():
             ])
 
 def log_inference_time(inference_time_ms: float, success: bool = True):
-    """Enregistrer une métrique d'inférence dans le CSV"""
+    Enregistrer une métrique d'inférence dans le CSV
     ensure_monitoring_file()
     
     timestamp = datetime.now().isoformat()
@@ -40,7 +81,7 @@ def log_inference_time(inference_time_ms: float, success: bool = True):
         ])
 
 def time_inference(func):
-    """Décorateur pour mesurer le temps d'inférence"""
+    Décorateur pour mesurer le temps d'inférence
     @wraps(func)
     async def wrapper(*args, **kwargs):
         start_time = time.perf_counter()
@@ -85,4 +126,4 @@ def time_inference(func):
             
             raise e
     
-    return wrapper
+    return wrapper"""
