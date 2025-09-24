@@ -49,6 +49,16 @@
                 <div id="result" class="mt-4" style="display: none;"></div>
                 {% endif %}
             </div>
+
+            <!-- Section feedback -->
+            <div id="feedbackSection" class="mt-4" style="display: none;">
+                <h6>La prédiction vous semble-t-elle correcte ?</h6>
+                <div>
+                    <button id="feedbackPositive" class="btn btn-success me-2">👍 Oui</button>
+                    <button id="feedbackNegative" class="btn btn-danger">👎 Non</button>
+                </div>
+            </div>
+
         </div>
     </div>
 </div>
@@ -56,6 +66,8 @@
 
 {% block scripts %}
 <script>
+let lastPrediction = ""; // Stocke la dernière prédiction
+
 document.getElementById('imageFile').addEventListener('change', function(e) {
     const file = e.target.files[0];
     if (file) {
@@ -106,6 +118,8 @@ document.getElementById('predictionForm').addEventListener('submit', async funct
         const data = await response.json();
         
         if (response.ok) {
+            lastPrediction = data.prediction;
+            lastTimeMetricId = data.time_metric_id; // Sauvegarde pour feedback
             const isDog = data.prediction === 'Dog';
             const emoji = isDog ? '🐶' : '🐱';
             const bgColor = isDog ? 'bg-warning' : 'bg-success';
@@ -115,7 +129,7 @@ document.getElementById('predictionForm').addEventListener('submit', async funct
                     <h5>${emoji} Résultat de la prédiction</h5>
                     <div class="row">
                         <div class="col-md-6">
-                            <strong>Prédiction:</strong> ${data.prediction}<br>
+                            <strong>Prédiction:</strong> <span id="predictionText">${data.prediction}</span><br>
                             <strong>Confiance:</strong> ${data.confidence}<br>
                             <strong>Fichier:</strong> ${data.filename}
                         </div>
@@ -137,7 +151,8 @@ document.getElementById('predictionForm').addEventListener('submit', async funct
         }
         
         result.style.display = 'block';
-        
+        document.getElementById('feedbackSection').style.display = 'block';
+
     } catch (error) {
         result.innerHTML = `
             <div class="alert alert-danger">
@@ -151,5 +166,61 @@ document.getElementById('predictionForm').addEventListener('submit', async funct
     loading.style.display = 'none';
     predictBtn.disabled = false;
 });
+
+document.getElementById('feedbackPositive').addEventListener('click', function() {
+    sendFeedback(true);
+});
+
+document.getElementById('feedbackNegative').addEventListener('click', function() {
+    sendFeedback(false);
+});
+
+async function sendFeedback(isPositive) {
+    const fileInput = document.getElementById('imageFile');
+    const tokenInput = document.getElementById('apiToken');
+
+    const file = fileInput.files[0];
+    const token = tokenInput.value;
+
+    if (!file) {
+        alert('Pas d’image à envoyer en feedback.');
+        return;
+    }
+
+    if (!lastPrediction) {
+        alert("Prédiction introuvable. Veuillez d'abord faire une prédiction.");
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('feedback', String(isPositive ? 1 : 0)); // Obligatoire : string
+    formData.append('prediction', String(lastPrediction)); // Obligatoire : string
+    formData.append('time_metric_id', String(lastTimeMetricId || ''));
+
+    console.log([...formData.entries()]); // Debug
+
+    try {
+        const response = await fetch('/api/feedback', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            },
+            body: formData
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            alert('Merci pour votre retour !');
+            document.getElementById('feedbackSection').style.display = 'none';
+        } else {
+            alert('Erreur : ' + (data.detail || 'Impossible d’envoyer le feedback.'));
+        }
+    } catch (error) {
+        alert('Erreur de connexion : ' + error.message);
+    }
+}
+
 </script>
 {% endblock %}

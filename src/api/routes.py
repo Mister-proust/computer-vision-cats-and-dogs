@@ -1,9 +1,15 @@
-from fastapi import APIRouter, File, UploadFile, HTTPException, Depends, Request
+from fastapi import APIRouter, File, UploadFile, HTTPException, Depends, Request, Form
+from sqlalchemy.orm import Session
+from src.utils.db import SessionLocal
+from src.data.database import FeedbackUsers, Base, engine, time_metrics
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 import sys
 from pathlib import Path
 import time
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+
+Base.metadata.create_all(bind=engine)
 
 # Ajouter le répertoire racine au path
 ROOT_DIR = Path(__file__).parent.parent.parent
@@ -18,6 +24,15 @@ TEMPLATES_DIR = ROOT_DIR / "src" / "web" / "templates"
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 
 router = APIRouter()
+auth_scheme = HTTPBearer()
+
+# Initialisation de la session DB 
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
 
 # Initialisation du prédicteur
 predictor = CatDogPredictor()
@@ -56,22 +71,33 @@ async def inference_page(request: Request):
     })
 
 @router.post("/api/predict")
-@time_inference  # Décorateur de monitoring
 async def predict_api(
     file: UploadFile = File(...),
-    token: str = Depends(verify_token)
+    token: str = Depends(verify_token),
+    db: Session = Depends(get_db)
 ):
-    """API de prédiction avec monitoring"""
     if not predictor.is_loaded():
         raise HTTPException(status_code=503, detail="Modèle non disponible")
-    
+
     if not file.content_type.startswith('image/'):
         raise HTTPException(status_code=400, detail="Format d'image invalide")
-    
+
+    start_time = time.perf_counter()
     try:
         image_data = await file.read()
         result = predictor.predict(image_data)
-        
+
+        inference_time_ms = (time.perf_counter() - start_time) * 1000
+
+        # Créer entrée time_metrics
+        metric = time_metrics(
+            inference_time_ms=inference_time_ms,
+            success=True
+        )
+        db.add(metric)
+        db.commit()
+        db.refresh(metric)
+
         response_data = {
             "filename": file.filename,
             "prediction": result["prediction"],
@@ -79,37 +105,54 @@ async def predict_api(
             "probabilities": {
                 "cat": f"{result['probabilities']['cat']:.2%}",
                 "dog": f"{result['probabilities']['dog']:.2%}"
-            }
+            },
+            "time_metric_id": metric.id
         }
-        
-        return response_data
-        
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Erreur de prédiction: {str(e)}")
 
-        # Logger les métriques
-        log_inference_time(
-            inference_time_ms=inference_time_ms,
-            filename=file.filename,
-            prediction=result["prediction"],
-            confidence=f"{result['confidence']:.2%}",
-            success=True
-        )
-        
         return response_data
-        
+
     except Exception as e:
-        # En cas d'erreur, logger quand même le temps
         end_time = time.perf_counter()
         inference_time_ms = (end_time - start_time) * 1000
-        
+
         log_inference_time(
             inference_time_ms=inference_time_ms,
             filename=file.filename if file else "unknown",
             success=False
         )
-        
+
         raise HTTPException(status_code=500, detail=f"Erreur de prédiction: {str(e)}")
+
+
+@router.post("/api/feedback")
+async def feedback(
+    file: UploadFile = File(...),
+    feedback: int = Form(...),
+    prediction: str = Form(...),
+    time_metric_id: int = Form(...),
+    token: HTTPAuthorizationCredentials = Depends(auth_scheme),
+    db: Session = Depends(get_db)
+):
+    # Vérification du token
+    if token.credentials != "?C@TS&D0GS!":
+        raise HTTPException(status_code=403, detail="Token invalide")
+
+     # Lecture du fichier image
+    image_data = await file.read()
+
+    # Création de l'entrée Feedback
+    feedback_entry = FeedbackUsers(
+        image_data=image_data,
+        feedback=feedback,
+        prediction=prediction,
+        time_metric_id=time_metric_id  
+    )
+
+    db.add(feedback_entry)
+    db.commit()
+    db.refresh(feedback_entry)
+
+    return {"detail": "Feedback reçu", "feedback": feedback, "prediction": prediction}
 
 @router.get("/api/info")
 async def api_info():
