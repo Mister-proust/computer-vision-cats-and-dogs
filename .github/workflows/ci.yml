@@ -7,19 +7,6 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    
-    steps:
-    - uses: actions/checkout@v4
-    
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: 3.11
-    
-    - name: Install dependencies
-      run: |jobs:
-  test:
-    runs-on: ubuntu-latest
 
     services:
       postgres:
@@ -57,25 +44,5 @@ jobs:
       - name: Set env vars
         run: echo "DATABASE_URL=postgresql+psycopg2://postgres:postgres@localhost:5432/catsdogs" >> $GITHUB_ENV
 
-      - name: Start API and run tests
-        run: |
-          python scripts/run_api.py &
-          sleep 10
-          pytest tests -v
-
-        pip install -r requirements/base.txt
-        pip install pytest
-    
-    - name: Setup test environment
-      run: |
-        mkdir -p data/processed/models
-        touch data/processed/models/cats_dogs_model.keras
-    
-    - name: Set PYTHONPATH
-      run: echo "PYTHONPATH=$PYTHONPATH:$(pwd)" >> $GITHUB_ENV
-    
-    - name: Start API and run tests
-      run: |
-        python scripts/run_api.py &
-        sleep 10
-        pytest tests -v
+      - name: Set PYTHONPATH
+        run: echo "PYTHONPATH=$PYTHONPATH:$(pwd)"
