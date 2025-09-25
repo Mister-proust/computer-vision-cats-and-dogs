@@ -9,6 +9,9 @@ services:
       - DATABASE_URL=postgresql://${USER_POSTGRES}:${PASSWORD_POSTGRES}@db:5432/${DATABASE_POSTGRES}
     depends_on:
       - db
+    volumes:
+      - ./src/data/images:/app/src/data/images
+
 
   db:
     image: postgres:15

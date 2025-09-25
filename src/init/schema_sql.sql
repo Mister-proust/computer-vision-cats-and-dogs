@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS monitoring.time_metrics (
 
 CREATE TABLE IF NOT EXISTS monitoring.feedbackusers (
     id SERIAL PRIMARY KEY, 
-    image_data BYTEA NOT NULL,               
+    image_path VARCHAR(75) NOT NULL,               
     feedback BOOLEAN,                         
     prediction VARCHAR(50) NOT NULL,         
     time_metric_id INTEGER,                   

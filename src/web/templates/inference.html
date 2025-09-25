@@ -66,7 +66,9 @@
 
 {% block scripts %}
 <script>
-let lastPrediction = ""; // Stocke la dernière prédiction
+let lastPrediction = "";
+let lastConfidence = 0;
+let lastTimeMetricId = null;
 
 document.getElementById('imageFile').addEventListener('change', function(e) {
     const file = e.target.files[0];
@@ -119,7 +121,9 @@ document.getElementById('predictionForm').addEventListener('submit', async funct
         
         if (response.ok) {
             lastPrediction = data.prediction;
-            lastTimeMetricId = data.time_metric_id; // Sauvegarde pour feedback
+            lastConfidence = parseFloat(data.confidence.replace("%",""));
+            lastTimeMetricId = data.time_metric_id;
+
             const isDog = data.prediction === 'Dog';
             const emoji = isDog ? '🐶' : '🐱';
             const bgColor = isDog ? 'bg-warning' : 'bg-success';
@@ -168,14 +172,14 @@ document.getElementById('predictionForm').addEventListener('submit', async funct
 });
 
 document.getElementById('feedbackPositive').addEventListener('click', function() {
-    sendFeedback(true);
+    sendFeedback(1);
 });
 
 document.getElementById('feedbackNegative').addEventListener('click', function() {
-    sendFeedback(false);
+    sendFeedback(0);
 });
 
-async function sendFeedback(isPositive) {
+async function sendFeedback(feedbackValue) {
     const fileInput = document.getElementById('imageFile');
     const tokenInput = document.getElementById('apiToken');
 
@@ -187,18 +191,22 @@ async function sendFeedback(isPositive) {
         return;
     }
 
-    if (!lastPrediction) {
+    if (!lastPrediction || lastTimeMetricId === null) {
         alert("Prédiction introuvable. Veuillez d'abord faire une prédiction.");
         return;
     }
 
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('feedback', String(isPositive ? 1 : 0)); // Obligatoire : string
-    formData.append('prediction', String(lastPrediction)); // Obligatoire : string
-    formData.append('time_metric_id', String(lastTimeMetricId || ''));
+    // Conversion Cat/Dog -> c/d
+    const predictionValue = (lastPrediction === "Cat") ? "c" : "d";
 
-    console.log([...formData.entries()]); // Debug
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("feedback", feedbackValue);
+    formData.append("prediction", predictionValue);
+    formData.append("proba", Math.round(lastConfidence));
+    formData.append("time_metric_id", lastTimeMetricId);
+
+    console.log("Feedback envoyé:", [...formData.entries()]);
 
     try {
         const response = await fetch('/api/feedback', {
@@ -221,6 +229,5 @@ async function sendFeedback(isPositive) {
         alert('Erreur de connexion : ' + error.message);
     }
 }
-
 </script>
 {% endblock %}

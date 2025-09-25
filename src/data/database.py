@@ -41,7 +41,7 @@ class FeedbackUsers(Base):
     __table_args__ = {"schema": "monitoring"}
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    image_data = Column(LargeBinary, nullable=False)  
+    image_path = Column(String, nullable=False)  
     timestamp = Column(DateTime, default=datetime.utcnow, nullable=False)
     feedback = Column(Integer, nullable=False)  
     prediction = Column(String, nullable=False) 

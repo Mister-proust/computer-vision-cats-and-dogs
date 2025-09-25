@@ -7,6 +7,7 @@ from fastapi.templating import Jinja2Templates
 import sys
 from pathlib import Path
 import time
+from datetime import datetime
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 Base.metadata.create_all(bind=engine)
@@ -14,6 +15,8 @@ Base.metadata.create_all(bind=engine)
 # Ajouter le répertoire racine au path
 ROOT_DIR = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(ROOT_DIR))
+BASE_DIR = ROOT_DIR / "src" / "data" / "images"
+
 
 from .auth import verify_token
 from src.models.predictor import CatDogPredictor
@@ -123,12 +126,12 @@ async def predict_api(
 
         raise HTTPException(status_code=500, detail=f"Erreur de prédiction: {str(e)}")
 
-
 @router.post("/api/feedback")
 async def feedback(
     file: UploadFile = File(...),
-    feedback: int = Form(...),
-    prediction: str = Form(...),
+    feedback: int = Form(...),  # 1 = positif, 0 = négatif
+    prediction: str = Form(...),  # "c" ou "d"
+    proba: int = Form(...),  # pourcentage (ex: 90)
     time_metric_id: int = Form(...),
     token: HTTPAuthorizationCredentials = Depends(auth_scheme),
     db: Session = Depends(get_db)
@@ -137,23 +140,41 @@ async def feedback(
     if token.credentials != "?C@TS&D0GS!":
         raise HTTPException(status_code=403, detail="Token invalide")
 
-     # Lecture du fichier image
-    image_data = await file.read()
+    # Définir dossier selon feedback et prédiction
+    feedback_dir = "positif" if feedback == 1 else "negatif"
+    pred_dir = "chat" if prediction == "c" else "chien"
 
-    # Création de l'entrée Feedback
+    save_dir = BASE_DIR / feedback_dir / pred_dir
+    save_dir.mkdir(parents=True, exist_ok=True)
+
+    # Génération du nom du fichier
+    timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+    filename = f"{timestamp}_{feedback}_{prediction}_{proba}.jpg"
+    filepath = save_dir / filename
+    path_str = str(filepath)
+
+    # Sauvegarde du fichier sur le disque
+    with open(filepath, "wb") as buffer:
+        buffer.write(await file.read())
+
+    # Création de l'entrée Feedback en base (on stocke juste le chemin)
     feedback_entry = FeedbackUsers(
-        image_data=image_data,
+        image_path=path_str,      # <-- on change image_data en image_path
         feedback=feedback,
         prediction=prediction,
-        time_metric_id=time_metric_id  
+        time_metric_id=time_metric_id
     )
 
     db.add(feedback_entry)
     db.commit()
     db.refresh(feedback_entry)
 
-    return {"detail": "Feedback reçu", "feedback": feedback, "prediction": prediction}
-
+    return {
+        "detail": "Feedback reçu et image sauvegardée",
+        "feedback": feedback,
+        "prediction": prediction,
+        "image_path": filepath
+    }
 @router.get("/api/info")
 async def api_info():
     """Informations API JSON"""
