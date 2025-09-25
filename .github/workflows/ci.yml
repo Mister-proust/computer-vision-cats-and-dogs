@@ -26,14 +26,11 @@ jobs:
         mkdir -p data/processed/models
         touch data/processed/models/cats_dogs_model.keras
     
-    - name: Start API and test
+    - name: Set PYTHONPATH
+      run: echo "PYTHONPATH=$PYTHONPATH:$(pwd)" >> $GITHUB_ENV
+    
+    - name: Start API and run tests
       run: |
         python scripts/run_api.py &
         sleep 10
-        python tests/test_api_simple.py
-        sleep 10
-        python tests/test_performance_modele.py
-        sleep 10 
-        python tests/test_integration_base_de_donnees.py
-        sleep 10
-        python tests/test_fonctionnel_feedback.py
+        pytest tests -v
