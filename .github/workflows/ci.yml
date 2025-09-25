@@ -17,7 +17,52 @@ jobs:
         python-version: 3.11
     
     - name: Install dependencies
-      run: |
+      run: |jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: catsdogs
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.11
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements/base.txt
+          pip install pytest
+
+      - name: Setup test environment
+        run: |
+          mkdir -p data/processed/models
+          touch data/processed/models/cats_dogs_model.keras
+
+      - name: Set env vars
+        run: echo "DATABASE_URL=postgresql+psycopg2://postgres:postgres@localhost:5432/catsdogs" >> $GITHUB_ENV
+
+      - name: Start API and run tests
+        run: |
+          python scripts/run_api.py &
+          sleep 10
+          pytest tests -v
+
         pip install -r requirements/base.txt
         pip install pytest
     
