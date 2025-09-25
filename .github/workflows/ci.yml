@@ -31,3 +31,9 @@ jobs:
         python scripts/run_api.py &
         sleep 10
         python tests/test_api_simple.py
+        sleep 10
+        python tests/test_performance_modele.py
+        sleep 10 
+        python tests/test_integration_base_de_donnees.py
+        sleep 10
+        python tests/test_fonctionnel_feedback.py
