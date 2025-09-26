@@ -22,8 +22,8 @@
 1. **Utilise ce template** en cliquant sur "Use this template" sur GitHub
 2. **Clone ton nouveau repo** : `git clone <ton-repo>`
 3. **Configure l'environnement** : `cp .env.example .env`
-4. **Installe les dépendances** : `pip install -r requirements/dev.txt`
-5. **Lance les tests** : `make test`
+4. **Installe les dépendances** : `pip install -r requirements/base.txt`
+5. **Lance les tests** : `pytest`
 
 ## 📁 Structure du projet
 
@@ -37,7 +37,7 @@ project-name/
 │   ├── data/                # Stockage des images récupérées
 │   ├── models/              # Modèles ML/IA
 │   ├── monitoring/          # Monitoring de l'API
-│   ├── monitoring/          # Monitoring des modèles
+│   ├── init/                # Schéma SQL
 │   └── utils/               # Utilitaires partagés
 ├── data/
 │   ├── raw/                 # Données brutes (gitignored)
