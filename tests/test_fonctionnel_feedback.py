@@ -25,7 +25,6 @@ def test_image():
 def test_feedback_integration(db_session, test_image):
     headers = {"Authorization": f"Bearer {TOKEN}"}
 
-    # 1. Faire une prédiction
     with open(test_image, "rb") as f:
         files = {"file": (test_image.name, f, "image/jpeg")}
         response = requests.post(f"{BASE_URL}/api/predict", files=files, headers=headers)
@@ -35,13 +34,12 @@ def test_feedback_integration(db_session, test_image):
     metric_id = data.get("time_metric_id")
     assert metric_id is not None
 
-    # 2. Ajouter un feedback utilisateur (multipart/form-data)
     with open(test_image, "rb") as f:
         files = {"file": (test_image.name, f, "image/jpeg")}
         form_data = {
-            "feedback": "1",              # ⚠️ en string car Form(...)
-            "prediction": "c",            # ou "d"
-            "proba": "90",                # toujours string
+            "feedback": "1",             
+            "prediction": "c",          
+            "proba": "90",               
             "time_metric_id": str(metric_id)
         }
         fb_response = requests.post(
@@ -54,7 +52,6 @@ def test_feedback_integration(db_session, test_image):
     assert fb_response.status_code == 200
 
     fb_data = fb_response.json()
-    # si ta route ne renvoie pas l'id, il faudra le chercher en base
     fb_entry = db_session.query(FeedbackUsers).filter_by(time_metric_id=metric_id).first()
     assert fb_entry is not None
     assert fb_entry.feedback == 1
