@@ -34,8 +34,9 @@ project-name/
 │   └── ISSUE_TEMPLATE/      # Templates d'issues
 ├── src/                     # Code source principal
 │   ├── api/                 # APIs et services web
-│   ├── data/                # Scripts de traitement des données
+│   ├── data/                # Stockage des images récupérées
 │   ├── models/              # Modèles ML/IA
+│   ├── monitoring/          # Monitoring de l'API
 │   ├── monitoring/          # Monitoring des modèles
 │   └── utils/               # Utilitaires partagés
 ├── data/
@@ -50,30 +51,9 @@ project-name/
 ├── scripts/                 # Scripts d'automatisation/déploiement
 ├── requirements/            # Dépendances par environnement
 │   ├── base.txt
-│   ├── dev.txt
-│   └── prod.txt
-├── .env.example             # Variables d'environnement exemple
 ├── .gitignore
 ├── README.md
-├── Makefile                 # Commandes fréquentes
-└── pyproject.toml           # Configuration Python/packaging
 ```
-
-## 🛠 Commandes utiles
-
-```bash
-make install        # Installer les dépendances
-make test          # Lancer les tests
-make lint          # Vérifier le code
-make docker-build  # Construire l'image Docker
-make clean         # Nettoyer les fichiers temporaires
-```
-
-## 🔧 Configuration
-
-1. Copie `.env.example` vers `.env`
-2. Adapte les variables selon ton projet
-3. Configure tes secrets GitHub pour le CI/CD
 
 ## 📊 Types de projets supportés
 
@@ -92,3 +72,11 @@ make clean         # Nettoyer les fichiers temporaires
 
 ## 📄 Licence
 MIT - voir LICENSE pour plus de détails.
+
+## RGPD 
+
+Les images envoyées par les utilisateurs ne sont pas conservés sauf si l'utilisateur donne un feedback. A ce moment la, l'utilisateur consent à ce que son image soit enregistré afin d'être potentiellement réutilisée dans le cadre d'un réapprentissage du modèle. L'image ne sera pas utilisé pour autre chose que le réapprentissage du modèle et surtout, l'image ne sera pas vendue. Il est tout à fait possible de demander à supprimer les images en envoyant un mail. 
+
+## Procédure de réentrainement
+
+Les images stockées et récupérées par le feedback feront l'objet d'une analyse par un humain. Si ces images sont pertinentes, elles seront conservées afin de les utiliser pour réentrainer le modèle. 
